@@ -3,80 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>แผนที่บริการ - งานดีขอนแก่น</title>
-    <link href="https://fonts.googleapis.com/css2 family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
-    
+    <title>แผนที่ช่าง - งานดีขอนแก่น</title>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <style>
-        /* 🎨 ระบบตัวแปรสีรองรับ Dark/Light Mode อัตโนมัติ */
-        :root {
-            --bg-color: #f4f7f6; --card-bg: #ffffff; --text-main: #222222; --text-sub: #666666;
-            --border-color: #dddddd; --input-bg: #ffffff; --primary: #007BFF;
-        }
+        /* 🎨 ระบบตัวแปรสีรองรับ Dark/Light Mode */
+        :root { --bg-color: #f4f7f6; --card-bg: #ffffff; --text-main: #222222; --text-sub: #666666; --border-color: #dddddd; --input-bg: #ffffff; --primary: #007BFF; }
         @media (prefers-color-scheme: dark) {
-            :root {
-                --bg-color: #121212; --card-bg: #1e1e1e; --text-main: #ffffff; --text-sub: #bbbbbb;
-                --border-color: #444444; --box-bg: #2a2a2a; --input-bg: #333333; --primary: #3b9aff;
-            }
-            /* 🌑 ทริค CSS เปลี่ยนแผนที่ธรรมดาให้กลายเป็น Dark Map อัตโนมัติตามเครื่อง */
-            .leaflet-layer, .leaflet-control-zoom-in, .leaflet-control-zoom-out, .leaflet-control-attribution {
-                filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
-            }
+            :root { --bg-color: #121212; --card-bg: #1e1e1e; --text-main: #ffffff; --text-sub: #bbbbbb; --border-color: #333333; --box-bg: #2a2a2a; --input-bg: #333333; --primary: #3b9aff; }
+            .leaflet-layer, .leaflet-control-zoom-in, .leaflet-control-zoom-out, .leaflet-control-attribution { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
         }
 
-        body { font-family: 'Chakra Petch', sans-serif; background: var(--bg-color); color: var(--text-main); margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; }
+        body { font-family: 'Chakra Petch', sans-serif; background: var(--bg-color); color: var(--text-main); margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         
-        /* ส่วนหัว */
-        .header-section { background: var(--card-bg); padding: 15px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); }
-        .header-section h2 { margin: 0; font-size: 26px; color: var(--primary); }
-        .btn-back { background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; }
+        /* 📱 Mobile-First Top Navigation Bar */
+        .top-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: var(--card-bg); border-bottom: 1px solid var(--border-color); z-index: 1001; }
+        .logo-text { font-size: 24px; font-weight: 700; color: var(--primary); margin: 0; }
+        .btn-logout-icon { background: none; border: none; color: #dc3545; font-size: 16px; font-weight: 600; cursor: pointer; font-family: inherit; }
+        
+        .top-tabs { display: flex; background: var(--card-bg); z-index: 1000; border-bottom: 1px solid var(--border-color); box-shadow: 0 4px 10px rgba(0,0,0,0.05); overflow-x: auto; white-space: nowrap; flex-shrink: 0;}
+        .tab-link { flex: 1; text-align: center; padding: 15px 10px; text-decoration: none; color: var(--text-sub); font-weight: 600; font-size: 16px; border-bottom: 3px solid transparent; transition: 0.2s; min-width: 110px; }
+        .tab-link.active { color: var(--primary); border-bottom: 3px solid var(--primary); }
 
-        /* พื้นที่แผนที่เต็มจอ */
+        /* พื้นที่แผนที่ */
         #mainMap { flex: 1; width: 100%; z-index: 1; }
 
-        /* 🗺️ สไตล์ของหน้าต่าง Popup บนแผนที่ */
-        .map-popup { font-family: 'Chakra Petch', sans-serif; font-size: 16px; min-width: 200px; line-height: 1.4; }
-        .map-popup h4 { margin: 0 0 5px 0; color: #007BFF; font-size: 18px; font-weight: 700; }
+        /* 🗺️ สไตล์ Popup บนแผนที่ */
+        .map-popup { font-family: 'Chakra Petch', sans-serif; font-size: 15px; min-width: 200px; line-height: 1.4; }
+        .map-popup h4 { margin: 0 0 5px 0; color: var(--primary); font-size: 18px; font-weight: 700; }
         .map-popup p { margin: 4px 0; color: #333; }
-        .btn-pop-hire { background: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 16px; font-weight: bold; width: 100%; margin-top: 8px; text-align: center; display: block; text-decoration: none; }
+        .btn-pop-hire { background: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 16px; font-weight: bold; width: 100%; margin-top: 8px; display: block; }
 
-        /* 🎨 สไตล์สำหรับ Popup Modal กรอกข้อมูลจ้างงาน */
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 2000; padding: 20px; }
-        .modal-content { background: var(--card-bg); padding: 30px; border-radius: 16px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; border: 1px solid var(--border-color); box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-        .modal-content h3 { margin-top: 0; color: var(--primary); font-size: 26px; border-bottom: 2px solid var(--border-color); padding-bottom: 10px; }
-        label { font-weight: 600; display: block; margin: 15px 0 8px 0; font-size: 20px; }
-        input[type="text"], input[type="datetime-local"] { width: 100%; padding: 15px; border: 1px solid var(--border-color); border-radius: 10px; font-family: inherit; font-size: 20px; box-sizing: border-box; background: var(--input-bg); color: var(--text-main); }
-        #modalMap { height: 220px; width: 100%; border-radius: 10px; border: 1px solid var(--border-color); margin-bottom: 15px; z-index: 1; }
-        .btn-gps { background: #17a2b8; color: white; border: none; padding: 12px; border-radius: 10px; font-size: 18px; font-weight: 600; cursor: pointer; width: 100%; font-family: inherit; margin-bottom: 10px;}
+        /* 🛠️ Modal จ้างงาน */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; align-items: flex-end; justify-content: center; z-index: 2000; padding: 0; }
+        .modal-content { background: var(--card-bg); padding: 25px; border-radius: 24px 24px 0 0; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; box-shadow: 0 -10px 30px rgba(0,0,0,0.2); animation: slideUp 0.3s ease-out; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .modal-content h3 { margin-top: 0; color: var(--primary); font-size: 24px; border-bottom: 2px solid var(--border-color); padding-bottom: 10px; }
+        label { font-weight: 600; display: block; margin: 15px 0 8px 0; font-size: 18px; }
+        input[type="text"], input[type="datetime-local"] { width: 100%; padding: 15px; border: 1px solid var(--border-color); border-radius: 10px; font-family: inherit; font-size: 18px; box-sizing: border-box; background: var(--input-bg); color: var(--text-main); }
+        #modalMap { height: 200px; width: 100%; border-radius: 10px; border: 1px solid var(--border-color); z-index: 1; margin-bottom: 10px; }
+        .btn-gps { background: #17a2b8; color: white; border: none; padding: 12px; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; font-family: inherit; margin-bottom: 10px;}
         .modal-actions { display: flex; gap: 15px; margin-top: 25px; }
-        .btn-confirm { flex: 2; padding: 15px; background: #28a745; color: white; border: none; border-radius: 10px; font-size: 20px; font-weight: bold; cursor: pointer; }
-        .btn-cancel { flex: 1; padding: 15px; background: #dc3545; color: white; border: none; border-radius: 10px; font-size: 20px; font-weight: bold; cursor: pointer; }
+        .btn-confirm { flex: 2; padding: 15px; background: #28a745; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; }
+        .btn-cancel { flex: 1; padding: 15px; background: #dc3545; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <div class="header-section">
-        <h2>🗺️ แผนที่พิกัดงานบริการทั้งหมด</h2>
-        <a href="dashboard.html" class="btn-back">← กลับหน้าหลัก</a>
-    </div>
+    <header class="top-header">
+        <h1 class="logo-text">งานดีขอนแก่น</h1>
+        <button id="btn-logout" class="btn-logout-icon">🚪 ออกจากระบบ</button>
+    </header>
+
+    <nav class="top-tabs">
+        <a href="services.html" class="tab-link">🔍 ค้นหาบริการ</a>
+        <a href="map.html" class="tab-link active">🗺️ แผนที่ช่าง</a>
+        <a href="my-bookings.html" class="tab-link">📅 คิวงานของฉัน</a>
+    </nav>
 
     <div id="mainMap"></div>
 
     <div id="bookingModal" class="modal-overlay">
         <div class="modal-content">
             <h3>📝 รายละเอียดการจ้างงาน</h3>
-            <p style="font-size: 18px; color: var(--text-sub);">บริการ: <b id="modalServiceName" style="color: var(--text-main);"></b></p>
+            <p style="font-size: 16px; color: var(--text-sub);">บริการ: <b id="modalServiceName" style="color: var(--text-main);"></b></p>
             
-            <label>📅 วันและเวลาที่ต้องการให้เข้างาน:</label>
+            <label>📅 วัน/เวลา ให้ช่างเข้างาน:</label>
             <input type="datetime-local" id="modalTime">
 
-            <label>📞 เบอร์โทรศัพท์ของท่าน:</label>
+            <label>📞 เบอร์ติดต่อของคุณ:</label>
             <input type="text" id="modalPhone" placeholder="เบอร์โทรติดต่อผู้ให้บริการ...">
             
-            <label>📌 ปักหมุดหน้างานของคุณ (จุดที่จะให้ช่างไปทำ):</label>
-            <button type="button" class="btn-gps" id="btn-get-location">🎯 ค้นหาตำแหน่งปัจจุบันของฉันอัตโนมัติ</button>
+            <label>📌 ปักหมุดหน้างานของคุณ:</label>
+            <button type="button" class="btn-gps" id="btn-get-location">🎯 ค้นหาตำแหน่งปัจจุบันอัตโนมัติ</button>
             <div id="modalMap"></div>
             
             <input type="hidden" id="modalLat">
@@ -91,29 +92,31 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
         import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
-        // *** ใส่ Config ของคุณ ***
-  const firebaseConfig = {
-    apiKey: "AIzaSyAKRjExcEtHwljxXu2Ytr9kV1lJ_JiuFhg",
-    authDomain: "jobs-fa654.firebaseapp.com",
-    projectId: "jobs-fa654",
-    storageBucket: "jobs-fa654.firebasestorage.app",
-    messagingSenderId: "459749901677",
-    appId: "1:459749901677:web:0fb8949854967df4cc4664",
-    measurementId: "G-E8S45H7H7W"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
+        // *** Config ใหม่ ***
+        const firebaseConfig = {
+            apiKey: "AIzaSyAKRjExcEtHwljxXu2Ytr9kV1lJ_JiuFhg",
+            authDomain: "jobs-fa654.firebaseapp.com",
+            projectId: "jobs-fa654",
+            storageBucket: "jobs-fa654.firebasestorage.app",
+            messagingSenderId: "459749901677",
+            appId: "1:459749901677:web:0fb8949854967df4cc4664"
+        };
+        const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
         let currentUser = null;
         onAuthStateChanged(auth, user => { currentUser = user; });
 
-        // ตั้งค่าแผนที่หลัก (ศูนย์กลางอยู่ที่ขอนแก่น)
+        document.getElementById('btn-logout').addEventListener('click', () => {
+            if(confirm("ต้องการออกจากระบบใช่หรือไม่?")) {
+                signOut(auth).then(() => { window.location.href = "index.html"; });
+            }
+        });
+
         let mainMap = L.map('mainMap').setView([16.4322, 102.8236], 12);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mainMap);
 
@@ -121,32 +124,25 @@
         let usersData = {};
         let allServices = [];
 
-        // 🔄 โหลดข้อมูลพิกัดร้านช่างและบริการมารวมกัน
         async function loadMapMarkers() {
             try {
-                // 1. ดึงข้อมูลพิกัดช่าง
                 const provSnap = await getDocs(collection(db, "providers"));
                 provSnap.forEach(doc => { providersData[doc.id] = doc.data(); });
 
-                // 2. ดึงชื่อช่าง/ร้าน
                 const usersSnap = await getDocs(collection(db, "users"));
                 usersSnap.forEach(doc => { usersData[doc.id] = doc.data(); });
 
-                // 3. ดึงรายการบริการ
                 const srvSnap = await getDocs(collection(db, "services"));
                 srvSnap.forEach(doc => { allServices.push({ id: doc.id, ...doc.data() }); });
 
-                // 📌 ทำการปักหมุดลงแผนที่
                 allServices.forEach(srv => {
                     const provider = providersData[srv.provider_uid];
                     const userMeta = usersData[srv.provider_uid];
 
-                    // ถ้าช่างคนนี้มีการตั้งค่าพิกัดร้านไว้ ให้ปักหมุด
                     if (provider && provider.location && provider.location.lat && provider.location.lng) {
                         const shopName = (userMeta && userMeta.name) ? userMeta.name : "ร้านค้าในระบบ";
                         const srvStr = encodeURIComponent(JSON.stringify(srv));
 
-                        // สร้างข้อความ Popup ด้านในหมุด
                         const popupContent = `
                             <div class="map-popup">
                                 <h4>🏪 ${shopName}</h4>
@@ -155,18 +151,14 @@
                                 <button class="btn-pop-hire" onclick="openBookingModal('${srvStr}')">🤝 จ้างงานนี้</button>
                             </div>
                         `;
-
-                        // ทำการปักหมุดลง Map
                         L.marker([provider.location.lat, provider.location.lng])
                          .addTo(mainMap)
                          .bindPopup(popupContent);
                     }
                 });
-
             } catch (e) { console.error("Error loading map data: ", e); }
         }
 
-        // --- ระบบ Popup Modal สำหรับกรอกข้อมูลฝั่งลูกค้า (เหมือนหน้าหลักทุกประการ) ---
         let currentServiceToBook = null;
         let modalMap = null;
         let modalMarker = null;
@@ -184,7 +176,6 @@
 
             document.getElementById('bookingModal').style.display = 'flex';
 
-            // โดดร่มสร้างแผนที่ขนาดเล็กใน Modal จ้างงาน
             if (!modalMap) {
                 modalMap = L.map('modalMap').setView([16.4322, 102.8236], 13);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(modalMap);
@@ -200,15 +191,15 @@
 
         document.getElementById('btn-get-location').addEventListener('click', () => {
             const btn = document.getElementById('btn-get-location');
-            btn.innerText = "กำลังค้นหาตำแหน่ง...";
+            btn.innerText = "กำลังค้นหา...";
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
                         updateModalMarker(position.coords.latitude, position.coords.longitude);
                         modalMap.setView([position.coords.latitude, position.coords.longitude], 16);
-                        btn.innerText = "🎯 ค้นหาตำแหน่งปัจจุบันของฉันอัตโนมัติ";
+                        btn.innerText = "🎯 ค้นหาตำแหน่งปัจจุบันอัตโนมัติ";
                     },
-                    () => { alert("กรุณาเปิดสิทธิ์ GPS บนเครื่องของคุณครับ"); btn.innerText = "🎯 ค้นหาตำแหน่งปัจจุบันของฉันอัตโนมัติ"; }
+                    () => { alert("กรุณาเปิดสิทธิ์ GPS"); btn.innerText = "🎯 ค้นหาตำแหน่งปัจจุบันอัตโนมัติ"; }
                 );
             }
         });
@@ -226,9 +217,9 @@
             const lng = parseFloat(document.getElementById('modalLng').value);
             const appointmentTimeValue = document.getElementById('modalTime').value;
 
-            if (!appointmentTimeValue) return alert("กรุณาระบุวันและเวลาที่ต้องการรับบริการ");
-            if (!phone) return alert("กรุณากรอกเบอร์โทรศัพท์ติดต่อ");
-            if (isNaN(lat) || isNaN(lng)) return alert("กรุณาคลิกปักหมุดสถานที่หน้างานบนแผนที่ขนาดเล็ก");
+            if (!appointmentTimeValue) return alert("กรุณาระบุวันและเวลา");
+            if (!phone) return alert("กรุณากรอกเบอร์โทรศัพท์");
+            if (isNaN(lat) || isNaN(lng)) return alert("กรุณาปักหมุดหน้างาน");
 
             const appointmentTime = new Date(appointmentTimeValue);
             if (appointmentTime <= new Date()) return alert("ไม่สามารถเลือกเวลาในอดีตได้");
@@ -249,13 +240,12 @@
                     appointment_time: appointmentTime,
                     created_at: new Date()
                 });
-                alert(`✅ ส่งใบจ้างงานไปยังผู้ให้บริการสำเร็จเรียบร้อยแล้ว!`);
+                alert(`✅ ส่งใบจ้างงานสำเร็จ!`);
                 closeModal();
             } catch (e) { alert("ล้มเหลว: " + e.message); }
             finally { btn.disabled = false; btn.innerText = "ยืนยันส่งใบงาน"; }
         });
 
-        // เปิดระบบปักหมุดทันที
         loadMapMarkers();
     </script>
 </body>
