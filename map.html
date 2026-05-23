@@ -95,13 +95,18 @@
         import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
         // *** ใส่ Config ของคุณ ***
-        const firebaseConfig = {
-            apiKey: "AIzaSyBCtuNjcjOmDS1Luwg4-B5VoMrnFvlAUFI",
-            authDomain: "marketplace-3c894.firebaseapp.com",
-            projectId: "marketplace-3c894",
-            storageBucket: "marketplace-3c894.firebasestorage.app"
-        };
-        const app = initializeApp(firebaseConfig);
+  const firebaseConfig = {
+    apiKey: "AIzaSyAKRjExcEtHwljxXu2Ytr9kV1lJ_JiuFhg",
+    authDomain: "jobs-fa654.firebaseapp.com",
+    projectId: "jobs-fa654",
+    storageBucket: "jobs-fa654.firebasestorage.app",
+    messagingSenderId: "459749901677",
+    appId: "1:459749901677:web:0fb8949854967df4cc4664",
+    measurementId: "G-E8S45H7H7W"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
