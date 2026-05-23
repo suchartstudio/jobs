@@ -81,7 +81,7 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        document.getElementById('btn-login').addEventListener('click', async () => {
+       document.getElementById('btn-login').addEventListener('click', async () => {
             const provider = new GoogleAuthProvider();
             try {
                 const result = await signInWithPopup(auth, provider);
@@ -91,10 +91,23 @@
                 const docRef = doc(db, "users", user.uid);
                 const docSnap = await getDoc(docRef);
                 
+                let userRole = role; // กำหนดค่าเริ่มต้นตามที่ติ๊กเลือก
+
                 if (!docSnap.exists()) {
+                    // สมัครใหม่ บันทึกสิทธิ์ลงฐานข้อมูล
                     await setDoc(docRef, { name: user.displayName, email: user.email, role: role, created_at: new Date() });
+                } else {
+                    // เคยสมัครแล้ว ให้ดึงสิทธิ์เดิมจากฐานข้อมูลมาใช้
+                    userRole = docSnap.data().role;
                 }
-                window.location.href = "dashboard.html";
+
+                // 🌟 ระบบแยกทาง: ลูกค้าไปหน้าบริการ / ช่างไปหน้าควบคุม
+                if (userRole === "customer") {
+                    window.location.href = "services.html";
+                } else {
+                    window.location.href = "dashboard.html";
+                }
+
             } catch (error) { alert("ล้มเหลว: " + error.message); }
         });
     </script>
