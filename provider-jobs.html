@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>รายการงานที่ลูกค้าจ้าง - ขอนแก่น แพลตฟอร์ม</title>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
+   <style>
+        /* 🎨 ระบบตัวแปรสีรองรับ Dark/Light Mode อัตโนมัติ */
+        :root {
+            --bg-color: #f4f7f6; --card-bg: #ffffff; --text-main: #222222; --text-sub: #666666;
+            --border-color: #dddddd; --primary: #fd7e14;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #121212; --card-bg: #1e1e1e; --text-main: #ffffff; --text-sub: #bbbbbb;
+                --border-color: #444444; --primary: #e85d04;
+            }
+        }
+
+        body { font-family: 'Chakra Petch', sans-serif; background: var(--bg-color); color: var(--text-main); padding: 20px; font-size: 18px; margin: 0; transition: background 0.3s, color 0.3s; }
+        .container { max-width: 900px; margin: auto; background: var(--card-bg); padding: 30px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid var(--border-color); }
+        h2 { color: var(--primary); margin-top: 0; text-align: center; font-size: 32px; }
+        
+        .job-card { background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .job-details h3 { margin: 0 0 10px 0; color: var(--text-main); font-size: 22px; }
+        .job-details p { margin: 5px 0; color: var(--text-sub); font-size: 18px; }
+        
+        .badge { padding: 6px 12px; border-radius: 20px; font-weight: 600; font-size: 14px; display: inline-block; color: white; }
+        .badge-pending { background-color: #f39c12; }
+        .badge-accepted { background-color: #3498db; }
+        .badge-completed { background-color: #27ae60; }
+        .badge-cancelled { background-color: #c0392b; }
+
+        .action-section { text-align: right; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
+        
+        .btn-action { color: white; border: none; padding: 12px 16px; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 16px; font-weight: 600; width: 100%; text-align: center; text-decoration: none; display: block; }
+        .btn-accept { background: #007BFF; }
+        .btn-complete { background: #28a745; }
+        .btn-nav { background: #17a2b8; margin-bottom: 5px; }
+
+        .back-link { display: block; text-align: center; margin-top: 25px; color: var(--text-sub); text-decoration: none; font-size: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🔔 รายการใบงานที่ลูกค้าจ้างเข้ามา</h2>
+        <div id="loading-msg" style="text-align: center; color: #666; margin: 15px 0;">กำลังเชื่อมต่อระบบใบงาน...</div>
+        
+        <div id="jobs-list"></div>
+        <a href="dashboard.html" class="back-link">← กลับไปหน้า Dashboard</a>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
+        import { getFirestore, collection, query, where, onSnapshot, doc, updateDoc } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+
+        // *** ใส่ Config ของคุณ ***
+  const firebaseConfig = {
+    apiKey: "AIzaSyAKRjExcEtHwljxXu2Ytr9kV1lJ_JiuFhg",
+    authDomain: "jobs-fa654.firebaseapp.com",
+    projectId: "jobs-fa654",
+    storageBucket: "jobs-fa654.firebasestorage.app",
+    messagingSenderId: "459749901677",
+    appId: "1:459749901677:web:0fb8949854967df4cc4664",
+    measurementId: "G-E8S45H7H7W"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) window.location.href = "index.html";
+            else listenToProviderJobs(user.uid);
+        });
+
+        function listenToProviderJobs(providerUid) {
+            const listDiv = document.getElementById('jobs-list');
+            const loadingMsg = document.getElementById('loading-msg');
+
+            const q = query(collection(db, "orders"), where("provider_uid", "==", providerUid));
+
+            onSnapshot(q, (snapshot) => {
+                loadingMsg.style.display = "none";
+                listDiv.innerHTML = "";
+
+                if (snapshot.empty) {
+                    listDiv.innerHTML = '<div class="no-data">ยังไม่มีลูกค้าส่งใบจ้างงานเข้ามาหาท่านในขณะนี้</div>';
+                    return;
+                }
+
+                let jobs = [];
+                snapshot.forEach(docSnap => { jobs.push({ id: docSnap.id, ...docSnap.data() }); });
+                jobs.sort((a, b) => b.created_at.seconds - a.created_at.seconds);
+
+                jobs.forEach((job) => {
+                    window[`acceptJob_${job.id}`] = async () => {
+                        if(confirm("ท่านยืนยันรับงานและพร้อมเดินทางไปให้บริการใช่หรือไม่?")) {
+                            await updateDoc(doc(db, "orders", job.id), { status: "accepted" });
+                        }
+                    };
+                    window[`completeJob_${job.id}`] = async () => {
+                        if(confirm("ท่านได้ให้บริการเสร็จสิ้นสมบูรณ์แล้วใช่หรือไม่?")) {
+                            await updateDoc(doc(db, "orders", job.id), { status: "completed" });
+                        }
+                    };
+
+                    const appointmentTime = job.appointment_time ? new Date(job.appointment_time.seconds * 1000).toLocaleString('th-TH') : '-';
+                    const customerPhone = job.customer_phone || '<span style="color:#dc3545;">ไม่ได้ระบุเบอร์โทร</span>';
+                    
+                    // 💡 สร้างลิงก์นำทาง Google Maps
+                    let navBtnHtml = '';
+                    if (job.location && job.location.lat && job.location.lng) {
+                        const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${job.location.lat},${job.location.lng}`;
+                        navBtnHtml = `<a href="${mapsUrl}" target="_blank" class="btn-action btn-nav">🗺️ กดนำทางไปหาลูกค้า</a>`;
+                    }
+
+                    let statusBadge = '', statusText = '', actionBtnHtml = '';
+
+                    if (job.status === 'pending') {
+                        statusText = '⏳ รอยืนยัน'; statusBadge = 'badge-pending';
+                        actionBtnHtml = `<button class="btn-action btn-accept" onclick="window.acceptJob_${job.id}()">🤝 ยืนยันรับงาน</button>`;
+                    } else if (job.status === 'accepted') {
+                        statusText = '🛠️ กำลังดำเนินการ'; statusBadge = 'badge-accepted';
+                        actionBtnHtml = `<button class="btn-action btn-complete" onclick="window.completeJob_${job.id}()">✅ ทำงานเสร็จสมบูรณ์</button>`;
+                    } else if (job.status === 'completed') {
+                        statusText = '✅ ปิดงานแล้ว'; statusBadge = 'badge-completed';
+                    } else if (job.status === 'cancelled') {
+                        statusText = '❌ ยกเลิกงาน'; statusBadge = 'badge-cancelled';
+                    }
+
+                    const card = document.createElement('div');
+                    card.className = 'job-card';
+                    card.innerHTML = `
+                        <div class="job-details">
+                            <h3>📋 บริการ: ${job.product_name}</h3>
+                            <p><b>💰 รายได้:</b> <span style="color:#28a745; font-weight:bold;">${job.price} บาท</span></p>
+                            <p><b>📞 เบอร์ติดต่อลูกค้า:</b> ${customerPhone}</p>
+                            <p class="time-highlight"><b>📍 เวลานัดหมาย:</b> ${appointmentTime}</p>
+                        </div>
+                        <div class="action-section">
+                            <span class="badge ${statusBadge}" style="margin-bottom: 10px; text-align: center;">${statusText}</span>
+                            ${navBtnHtml}
+                            ${actionBtnHtml}
+                        </div>
+                    `;
+                    listDiv.appendChild(card);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
