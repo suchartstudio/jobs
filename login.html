@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เข้าสู่ระบบ - งานดีขอนแก่น</title>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* 🎨 ระบบตัวแปรสีรองรับ Dark/Light Mode */
+        :root { --bg-color: #f4f7f6; --card-bg: #ffffff; --text-main: #222222; --text-sub: #666666; --border-color: #dddddd; --input-bg: #ffffff; --primary: #007BFF; }
+        @media (prefers-color-scheme: dark) {
+            :root { --bg-color: #121212; --card-bg: #1e1e1e; --text-main: #ffffff; --text-sub: #bbbbbb; --border-color: #444444; --input-bg: #333333; --primary: #3b9aff; }
+        }
+
+        body { 
+            font-family: 'Chakra Petch', sans-serif; background: var(--bg-color); color: var(--text-main); 
+            margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; padding: 20px; box-sizing: border-box;
+        }
+
+        /* 📱 ดีไซน์กล่องล็อกอินตรงกลางจอ */
+        .login-card { 
+            background: var(--card-bg); padding: 40px 30px; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); 
+            width: 100%; max-width: 400px; text-align: center; border: 1px solid var(--border-color);
+        }
+
+        .logo-text { font-size: 32px; font-weight: 700; color: var(--primary); margin: 0 0 5px 0; }
+        .subtitle { color: var(--text-sub); font-size: 16px; margin: 0 0 30px 0; }
+
+        label { display: block; text-align: left; font-weight: 600; margin-bottom: 8px; font-size: 16px; color: var(--text-main); }
+        
+        input[type="tel"], input[type="number"] { 
+            width: 100%; padding: 15px; font-size: 18px; border-radius: 12px; border: 2px solid var(--border-color); 
+            background: var(--input-bg); color: var(--text-main); font-family: inherit; box-sizing: border-box; margin-bottom: 20px;
+            transition: 0.3s; text-align: center; letter-spacing: 2px;
+        }
+        input:focus { border-color: var(--primary); outline: none; }
+
+        .btn-submit { 
+            width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 12px; 
+            font-weight: bold; cursor: pointer; font-family: inherit; font-size: 18px; transition: 0.2s; box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+        }
+        .btn-submit:hover { opacity: 0.9; transform: translateY(-2px); }
+        .btn-submit:disabled { background: #cccccc; cursor: not-allowed; box-shadow: none; transform: none; color: #666; }
+
+        .btn-back { 
+            background: none; border: none; color: var(--text-sub); font-size: 16px; margin-top: 15px; 
+            cursor: pointer; font-family: inherit; text-decoration: underline; 
+        }
+
+        /* สำหรับซ่อน/โชว์ หน้าต่าง */
+        #step-2 { display: none; }
+        
+        /* สไตล์สำหรับแจ้งเตือนสถานะ */
+        .status-msg { font-size: 14px; color: #dc3545; margin-bottom: 15px; display: none; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <h1 class="logo-text">งานดีขอนแก่น</h1>
+        <p class="subtitle">เข้าสู่ระบบเพื่อจ้างงานช่างมืออาชีพ</p>
+
+        <div id="step-1">
+            <label>📞 เบอร์โทรศัพท์มือถือ</label>
+            <input type="tel" id="phoneNumber" placeholder="08X-XXX-XXXX" maxlength="10">
+            <div id="error-step-1" class="status-msg">กรุณากรอกเบอร์โทรศัพท์ให้ถูกต้อง (10 หลัก)</div>
+            <button id="btn-send-otp" class="btn-submit">ส่งรหัส OTP ทาง SMS</button>
+        </div>
+
+        <div id="step-2">
+            <label>💬 กรอกรหัส OTP 6 หลัก</label>
+            <p style="font-size: 14px; color: var(--text-sub); margin-top: -5px; margin-bottom: 15px;">ระบบได้ส่งรหัสไปยังเบอร์ของคุณแล้ว</p>
+            <input type="number" id="otpCode" placeholder="X X X X X X">
+            <div id="error-step-2" class="status-msg">รหัส OTP ไม่ถูกต้อง กรุณาลองใหม่</div>
+            <button id="btn-verify-otp" class="btn-submit">ยืนยันตัวตนเข้าสู่ระบบ</button>
+            <button id="btn-back-step" class="btn-back">แก้ไขเบอร์โทรศัพท์</button>
+        </div>
+    </div>
+
+    <div id="recaptcha-container"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+        import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+
+        // *** Config ชุดใหม่ (Jobs-fa654) ***
+        const firebaseConfig = {
+            apiKey: "AIzaSyAKRjExcEtHwljxXu2Ytr9kV1lJ_JiuFhg",
+            authDomain: "jobs-fa654.firebaseapp.com",
+            projectId: "jobs-fa654",
+            storageBucket: "jobs-fa654.firebasestorage.app",
+            messagingSenderId: "459749901677",
+            appId: "1:459749901677:web:0fb8949854967df4cc4664"
+        };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // เช็คว่าถ้าล็อกอินอยู่แล้ว ให้เด้งไปหน้าแรกเลย ไม่ต้องมาล็อกอินซ้ำ
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const docSnap = await getDoc(doc(db, "users", user.uid));
+                if(docSnap.exists() && docSnap.data().role === 'provider') {
+                    window.location.href = "dashboard.html"; // ถ้าเป็นช่าง ไปหลังบ้าน
+                } else {
+                    window.location.href = "services.html"; // ถ้าเป็นลูกค้า ไปหน้าค้นหาช่าง
+                }
+            }
+        });
+
+        let confirmationResult = null;
+
+        // โหลดระบบ reCAPTCHA (แบบซ่อน ไม่ให้เกะกะสายตาลูกค้า)
+        auth.languageCode = 'th';
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+            'size': 'invisible'
+        });
+
+        const btnSend = document.getElementById('btn-send-otp');
+        const btnVerify = document.getElementById('btn-verify-otp');
+        const errStep1 = document.getElementById('error-step-1');
+        const errStep2 = document.getElementById('error-step-2');
+
+        // 🟢 สเต็ป 1: กดส่ง OTP
+        btnSend.addEventListener('click', () => {
+            let phone = document.getElementById('phoneNumber').value.trim();
+            errStep1.style.display = "none";
+            
+            // เช็คว่ากรอกเบอร์ครบไหม (คร่าวๆ)
+            if(phone.length < 9) {
+                errStep1.innerText = "กรุณากรอกเบอร์โทรศัพท์ให้ครบถ้วน";
+                errStep1.style.display = "block";
+                return;
+            }
+
+            // แปลง 0 ตัวแรกเป็น +66
+            if(phone.startsWith('0')) { phone = '+66' + phone.substring(1); }
+
+            btnSend.disabled = true;
+            btnSend.innerText = "กำลังส่ง SMS...";
+
+            const appVerifier = window.recaptchaVerifier;
+
+            signInWithPhoneNumber(auth, phone, appVerifier)
+                .then((result) => {
+                    confirmationResult = result;
+                    document.getElementById('step-1').style.display = 'none';
+                    document.getElementById('step-2').style.display = 'block';
+                    btnSend.disabled = false;
+                    btnSend.innerText = "ส่งรหัส OTP ทาง SMS";
+                }).catch((error) => {
+                    console.error(error);
+                    errStep1.innerText = "ส่งข้อความไม่สำเร็จ กรุณาลองใหม่อีกครั้ง";
+                    errStep1.style.display = "block";
+                    btnSend.disabled = false;
+                    btnSend.innerText = "ส่งรหัส OTP ทาง SMS";
+                    
+                    // รีเซ็ตตัวกันบอทหากเกิด error
+                    if(window.recaptchaVerifier) {
+                        window.recaptchaVerifier.render().then(function(widgetId) {
+                            grecaptcha.reset(widgetId);
+                        });
+                    }
+                });
+        });
+
+        // 🟢 ปุ่มกดย้อนกลับไปแก้เบอร์โทร
+        document.getElementById('btn-back-step').addEventListener('click', () => {
+            document.getElementById('step-2').style.display = 'none';
+            document.getElementById('step-1').style.display = 'block';
+            errStep2.style.display = "none";
+            document.getElementById('otpCode').value = "";
+        });
+
+        // 🟢 สเต็ป 2: กดยืนยัน OTP
+        btnVerify.addEventListener('click', () => {
+            const code = document.getElementById('otpCode').value.trim();
+            errStep2.style.display = "none";
+
+            if(code.length < 6) {
+                errStep2.innerText = "กรุณากรอกรหัส OTP ให้ครบ 6 หลัก";
+                errStep2.style.display = "block";
+                return;
+            }
+
+            btnVerify.disabled = true;
+            btnVerify.innerText = "กำลังตรวจสอบ...";
+
+            confirmationResult.confirm(code).then(async (result) => {
+                const user = result.user;
+                const docRef = doc(db, "users", user.uid);
+                const docSnap = await getDoc(docRef);
+
+                // ตรวจสอบว่าเคยสมัครหรือยัง
+                if (!docSnap.exists()) {
+                    // ถ้ายัง ให้เซฟข้อมูลลง Firestore ว่าเป็น "ลูกค้า" โดยปริยาย
+                    await setDoc(docRef, { 
+                        phone: user.phoneNumber, 
+                        role: "customer",
+                        name: "ผู้ใช้ทั่วไป",
+                        created_at: new Date() 
+                    });
+                    window.location.href = "services.html";
+                } else {
+                    // ถ้าเคยสมัครแล้ว เช็คว่าเป็นช่างหรือลูกค้า
+                    if(docSnap.data().role === 'provider') {
+                        window.location.href = "dashboard.html";
+                    } else {
+                        window.location.href = "services.html";
+                    }
+                }
+            }).catch((error) => {
+                console.error(error);
+                errStep2.innerText = "รหัส OTP ไม่ถูกต้อง หรือหมดอายุแล้ว";
+                errStep2.style.display = "block";
+                btnVerify.disabled = false;
+                btnVerify.innerText = "ยืนยันตัวตนเข้าสู่ระบบ";
+            });
+        });
+    </script>
+</body>
+</html>
