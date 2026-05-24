@@ -7,7 +7,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
     
     <style>
-        /* 🎨 ระบบตัวแปรสีรองรับ Dark/Light Mode */
         :root { --bg-color: #f4f7f6; --card-bg: #ffffff; --text-main: #222222; --text-sub: #666666; --border-color: #dddddd; --input-bg: #ffffff; --primary: #007BFF; }
         @media (prefers-color-scheme: dark) {
             :root { --bg-color: #121212; --card-bg: #1e1e1e; --text-main: #ffffff; --text-sub: #bbbbbb; --border-color: #444444; --input-bg: #333333; --primary: #3b9aff; }
@@ -18,14 +17,13 @@
             margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; padding: 20px; box-sizing: border-box;
         }
 
-        /* 📱 ดีไซน์กล่องล็อกอินตรงกลางจอ */
         .login-card { 
             background: var(--card-bg); padding: 40px 30px; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); 
             width: 100%; max-width: 400px; text-align: center; border: 1px solid var(--border-color);
         }
 
         .logo-text { font-size: 32px; font-weight: 700; color: var(--primary); margin: 0 0 5px 0; }
-        .subtitle { color: var(--text-sub); font-size: 16px; margin: 0 0 30px 0; }
+        .subtitle { color: var(--text-sub); font-size: 16px; margin: 0 0 25px 0; }
 
         label { display: block; text-align: left; font-weight: 600; margin-bottom: 8px; font-size: 16px; color: var(--text-main); }
         
@@ -36,6 +34,17 @@
         }
         input:focus { border-color: var(--primary); outline: none; }
 
+        /* 🌟 สไตล์กล่องเลือกสถานะ */
+        .role-options { display: flex; gap: 10px; margin-bottom: 20px; }
+        .role-box { 
+            flex: 1; border: 2px solid var(--border-color); border-radius: 12px; padding: 15px 10px; 
+            cursor: pointer; transition: 0.2s; font-weight: 600; font-size: 15px; color: var(--text-sub);
+        }
+        .role-box input[type="radio"] { display: none; }
+        .role-box:has(input[type="radio"]:checked) {
+            border-color: var(--primary); background: rgba(0, 123, 255, 0.05); color: var(--primary);
+        }
+
         .btn-submit { 
             width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 12px; 
             font-weight: bold; cursor: pointer; font-family: inherit; font-size: 18px; transition: 0.2s; box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
@@ -43,15 +52,9 @@
         .btn-submit:hover { opacity: 0.9; transform: translateY(-2px); }
         .btn-submit:disabled { background: #cccccc; cursor: not-allowed; box-shadow: none; transform: none; color: #666; }
 
-        .btn-back { 
-            background: none; border: none; color: var(--text-sub); font-size: 16px; margin-top: 15px; 
-            cursor: pointer; font-family: inherit; text-decoration: underline; 
-        }
+        .btn-back { background: none; border: none; color: var(--text-sub); font-size: 16px; margin-top: 15px; cursor: pointer; font-family: inherit; text-decoration: underline; }
 
-        /* สำหรับซ่อน/โชว์ หน้าต่าง */
         #step-2 { display: none; }
-        
-        /* สไตล์สำหรับแจ้งเตือนสถานะ */
         .status-msg { font-size: 14px; color: #dc3545; margin-bottom: 15px; display: none; font-weight: 600; }
     </style>
 </head>
@@ -59,9 +62,21 @@
 
     <div class="login-card">
         <h1 class="logo-text">งานดีขอนแก่น</h1>
-        <p class="subtitle">เข้าสู่ระบบเพื่อจ้างงานช่างมืออาชีพ</p>
+        <p class="subtitle">เข้าสู่ระบบเพื่อดำเนินการต่อ</p>
 
         <div id="step-1">
+            <label>👤 เลือกสถานะของคุณ (สำหรับผู้ใช้ใหม่)</label>
+            <div class="role-options">
+                <label class="role-box">
+                    <input type="radio" name="userRole" value="customer" checked>
+                    👨‍🔧 ผู้จ้างงาน
+                </label>
+                <label class="role-box">
+                    <input type="radio" name="userRole" value="provider">
+                    🛠️ ช่าง/ผู้รับจ้าง
+                </label>
+            </div>
+            
             <label>📞 เบอร์โทรศัพท์มือถือ</label>
             <input type="tel" id="phoneNumber" placeholder="08X-XXX-XXXX" maxlength="10">
             <div id="error-step-1" class="status-msg">กรุณากรอกเบอร์โทรศัพท์ให้ถูกต้อง (10 หลัก)</div>
@@ -98,21 +113,20 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // เช็คว่าถ้าล็อกอินอยู่แล้ว ให้เด้งไปหน้าแรกเลย ไม่ต้องมาล็อกอินซ้ำ
+        // เช็คสถานะล็อกอิน เพื่อเด้งไปหน้าหลักอัตโนมัติหากเคยล็อกอินแล้ว
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const docSnap = await getDoc(doc(db, "users", user.uid));
                 if(docSnap.exists() && docSnap.data().role === 'provider') {
-                    window.location.href = "dashboard.html"; // ถ้าเป็นช่าง ไปหลังบ้าน
+                    window.location.href = "dashboard.html";
                 } else {
-                    window.location.href = "services.html"; // ถ้าเป็นลูกค้า ไปหน้าค้นหาช่าง
+                    window.location.href = "services.html";
                 }
             }
         });
 
         let confirmationResult = null;
 
-        // โหลดระบบ reCAPTCHA (แบบซ่อน ไม่ให้เกะกะสายตาลูกค้า)
         auth.languageCode = 'th';
         window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
             'size': 'invisible'
@@ -128,14 +142,12 @@
             let phone = document.getElementById('phoneNumber').value.trim();
             errStep1.style.display = "none";
             
-            // เช็คว่ากรอกเบอร์ครบไหม (คร่าวๆ)
             if(phone.length < 9) {
                 errStep1.innerText = "กรุณากรอกเบอร์โทรศัพท์ให้ครบถ้วน";
                 errStep1.style.display = "block";
                 return;
             }
 
-            // แปลง 0 ตัวแรกเป็น +66
             if(phone.startsWith('0')) { phone = '+66' + phone.substring(1); }
 
             btnSend.disabled = true;
@@ -157,7 +169,6 @@
                     btnSend.disabled = false;
                     btnSend.innerText = "ส่งรหัส OTP ทาง SMS";
                     
-                    // รีเซ็ตตัวกันบอทหากเกิด error
                     if(window.recaptchaVerifier) {
                         window.recaptchaVerifier.render().then(function(widgetId) {
                             grecaptcha.reset(widgetId);
@@ -166,7 +177,7 @@
                 });
         });
 
-        // 🟢 ปุ่มกดย้อนกลับไปแก้เบอร์โทร
+        // 🟢 ปุ่มกดย้อนกลับ
         document.getElementById('btn-back-step').addEventListener('click', () => {
             document.getElementById('step-2').style.display = 'none';
             document.getElementById('step-1').style.display = 'block';
@@ -193,18 +204,27 @@
                 const docRef = doc(db, "users", user.uid);
                 const docSnap = await getDoc(docRef);
 
-                // ตรวจสอบว่าเคยสมัครหรือยัง
+                // 🌟 อ่านค่าสิทธิ์ที่ผู้ใช้ติ๊กเลือกไว้ในสเต็ปที่ 1
+                const selectedRole = document.querySelector('input[name="userRole"]:checked').value;
+
                 if (!docSnap.exists()) {
-                    // ถ้ายัง ให้เซฟข้อมูลลง Firestore ว่าเป็น "ลูกค้า" โดยปริยาย
+                    // ถ้าเป็นผู้ใช้ใหม่เอี่ยม ให้บันทึกสิทธิ์ตามที่เลือก
+                    const defaultName = selectedRole === "provider" ? "ผู้ให้บริการใหม่" : "ผู้ใช้ทั่วไป";
                     await setDoc(docRef, { 
                         phone: user.phoneNumber, 
-                        role: "customer",
-                        name: "ผู้ใช้ทั่วไป",
+                        role: selectedRole,
+                        name: defaultName,
                         created_at: new Date() 
                     });
-                    window.location.href = "services.html";
+                    
+                    // เด้งไปตามสิทธิ์ที่เพิ่งเลือก
+                    if (selectedRole === "provider") {
+                        window.location.href = "dashboard.html";
+                    } else {
+                        window.location.href = "services.html";
+                    }
                 } else {
-                    // ถ้าเคยสมัครแล้ว เช็คว่าเป็นช่างหรือลูกค้า
+                    // ถ้าเคยสมัครแล้ว ให้ยึดสิทธิ์เดิมจาก Database (เพิกเฉยต่อตัวเลือกหน้าเว็บ)
                     if(docSnap.data().role === 'provider') {
                         window.location.href = "dashboard.html";
                     } else {
