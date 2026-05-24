@@ -5,94 +5,100 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>บริการทั้งหมด - งานดีขอนแก่น</title>
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <style>
+        /* 🎨 ตัวแปรสีและ Dark Mode */
         :root { --bg-color: #f4f7f6; --card-bg: #ffffff; --text-main: #222222; --text-sub: #666666; --border-color: #dddddd; --box-bg: #f8f9fa; --input-bg: #ffffff; --primary: #007BFF; }
         @media (prefers-color-scheme: dark) {
             :root { --bg-color: #121212; --card-bg: #1e1e1e; --text-main: #ffffff; --text-sub: #bbbbbb; --border-color: #333333; --box-bg: #2a2a2a; --input-bg: #333333; --primary: #3b9aff; }
+            .leaflet-layer, .leaflet-control-zoom-in, .leaflet-control-zoom-out, .leaflet-control-attribution { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
         }
+        
         body { font-family: 'Chakra Petch', sans-serif; background: var(--bg-color); color: var(--text-main); margin: 0; padding-bottom: 40px; font-size: 16px; }
         
         /* 📱 Mobile-First Top Navigation Bar */
         .top-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: var(--card-bg); border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 1001; }
-        .logo-text { font-size: 24px; font-weight: 700; color: var(--primary); margin: 0; }
-        .btn-logout-icon { background: none; border: none; color: #dc3545; font-size: 16px; font-weight: 600; cursor: pointer; font-family: inherit; }
+        .logo-text { font-size: 22px; font-weight: 700; color: var(--primary); margin: 0; }
+        .btn-auth-icon { background: none; border: none; font-size: 16px; font-weight: 600; cursor: pointer; font-family: inherit; }
         
-        .top-tabs { display: flex; background: var(--card-bg); position: sticky; top: 61px; z-index: 1000; border-bottom: 1px solid var(--border-color); box-shadow: 0 4px 10px rgba(0,0,0,0.05); overflow-x: auto; white-space: nowrap; }
-        .tab-link { flex: 1; text-align: center; padding: 15px 10px; text-decoration: none; color: var(--text-sub); font-weight: 600; font-size: 16px; border-bottom: 3px solid transparent; transition: 0.2s; min-width: 110px; }
+        .top-tabs { display: flex; background: var(--card-bg); border-bottom: 1px solid var(--border-color); position: sticky; top: 60px; z-index: 1000; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .tab-link { flex: 1; text-align: center; padding: 12px; text-decoration: none; color: var(--text-sub); font-weight: 600; border-bottom: 3px solid transparent; transition: 0.2s; }
         .tab-link.active { color: var(--primary); border-bottom: 3px solid var(--primary); }
 
-        /* ส่วนเนื้อหาหลัก */
-        .content-container { padding: 20px; max-width: 1200px; margin: auto; }
-        .search-section { background: var(--card-bg); padding: 20px; border-radius: 16px; border: 1px solid var(--border-color); margin-bottom: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
-        .search-bar { width: 100%; padding: 15px; font-size: 18px; border-radius: 10px; border: 2px solid var(--border-color); background: var(--input-bg); color: var(--text-main); font-family: inherit; box-sizing: border-box; margin-bottom: 15px; }
+        /* 🔍 ส่วนค้นหาและเครื่องมือกรองแบบประหยัดพื้นที่ */
+        .content-container { max-width: 1200px; margin: auto; }
+        .search-section { padding: 20px; }
+        .search-bar { width: 100%; padding: 15px; font-size: 16px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-main); margin-bottom: 10px; box-sizing: border-box; font-family: inherit;}
         .search-bar:focus { border-color: var(--primary); outline: none; }
-        .category-filters { display: flex; overflow-x: auto; gap: 10px; padding-bottom: 10px; scrollbar-width: none; }
-        .category-filters::-webkit-scrollbar { display: none; }
-        .cat-btn { padding: 10px 20px; border-radius: 30px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-main); cursor: pointer; font-family: inherit; font-size: 15px; font-weight: 600; white-space: nowrap; transition: 0.2s; }
-        .cat-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
         
-        .distance-banner { background: #e0f2fe; border: 1px solid #bae6fd; color: #0369a1; padding: 15px; border-radius: 12px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .filter-select { width: 100%; padding: 12px; font-size: 16px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-main); font-family: inherit; margin-bottom: 15px; appearance: none; background-image: url('data:image/svg+xml;utf8,<svg fill="%23666" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>'); background-repeat: no-repeat; background-position: right 10px center;}
+
+        /* 📍 แบนเนอร์ค้นหาระยะทาง */
+        .distance-banner { background: #e0f2fe; border: 1px solid #bae6fd; color: #0369a1; padding: 15px; border-radius: 12px; margin: 0 20px 20px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
         @media (prefers-color-scheme: dark) { .distance-banner { background: #0c4a6e; border-color: #075985; color: #e0f2fe; } }
-        .btn-calc-dist { background: #0284c7; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; font-family: inherit; }
-        
-        .service-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .btn-calc-dist { background: #0284c7; color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-family: inherit; }
+
+        /* 📋 การ์ดบริการ */
+        .service-grid { padding: 0 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
         .card { background: var(--card-bg); border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid var(--border-color); overflow: hidden; display: flex; flex-direction: column; }
-        .card-img { width: 100%; height: 200px; object-fit: cover; background: #eee; }
+        .card-img { width: 100%; height: 180px; object-fit: cover; background: #eee; }
         .card-body { padding: 20px; display: flex; flex-direction: column; flex-grow: 1; }
-        .card-body h3 { font-size: 22px; margin: 0 0 5px 0; }
-        .meta-info { display: flex; justify-content: space-between; align-items: center; font-size: 15px; margin: 15px 0; color: var(--text-sub); background: var(--box-bg); padding: 10px; border-radius: 8px; border: 1px dashed var(--border-color); }
+        .card-body h3 { font-size: 20px; margin: 0 0 8px 0; }
+        .meta-info { display: flex; justify-content: space-between; align-items: center; font-size: 14px; margin: 15px 0; color: var(--text-sub); background: var(--box-bg); padding: 10px; border-radius: 8px; border: 1px dashed var(--border-color); }
         .dist-text { color: #dc3545; font-weight: bold; }
-        .price-tag { color: #28a745; font-weight: 700; font-size: 22px; margin: 10px 0 15px 0; }
-        .btn-hire { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 18px; font-family: inherit; margin-top: auto; }
-        
-        /* Modal จ้างงาน */
+        .price-tag { color: #28a745; font-weight: 700; font-size: 20px; margin: 10px 0; }
+        .btn-hire { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 18px; font-family: inherit; margin-top: auto; transition: 0.2s;}
+        .btn-hire:hover { opacity: 0.9; }
+
+        /* 🛠️ Modal จ้างงาน (ออกแบบให้สไลด์ขึ้นจากด้านล่างแบบมือถือ) */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; align-items: flex-end; justify-content: center; z-index: 2000; padding: 0; }
         .modal-content { background: var(--card-bg); padding: 25px; border-radius: 24px 24px 0 0; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; box-shadow: 0 -10px 30px rgba(0,0,0,0.2); animation: slideUp 0.3s ease-out; }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
         .modal-content h3 { margin-top: 0; color: var(--primary); font-size: 24px; border-bottom: 2px solid var(--border-color); padding-bottom: 10px; }
-        label { font-weight: 600; display: block; margin: 15px 0 8px 0; font-size: 18px; }
-        input[type="text"], input[type="datetime-local"] { width: 100%; padding: 15px; border: 1px solid var(--border-color); border-radius: 10px; font-family: inherit; font-size: 18px; box-sizing: border-box; background: var(--input-bg); color: var(--text-main); }
+        label { font-weight: 600; display: block; margin: 15px 0 8px 0; font-size: 16px; }
+        input[type="text"], input[type="datetime-local"] { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 10px; font-family: inherit; font-size: 16px; box-sizing: border-box; background: var(--input-bg); color: var(--text-main); }
         #modalMap { height: 200px; width: 100%; border-radius: 10px; border: 1px solid var(--border-color); z-index: 1; margin-bottom: 10px; }
-        .btn-gps { background: #17a2b8; color: white; border: none; padding: 12px; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; font-family: inherit; margin-bottom: 10px;}
+        .btn-gps { background: #17a2b8; color: white; border: none; padding: 10px; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; font-family: inherit; margin-bottom: 10px;}
         .modal-actions { display: flex; gap: 15px; margin-top: 25px; }
-        .btn-confirm { flex: 2; padding: 15px; background: #28a745; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; }
-        .btn-cancel { flex: 1; padding: 15px; background: #dc3545; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; }
+        .btn-confirm { flex: 2; padding: 15px; background: #28a745; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; font-family: inherit;}
+        .btn-cancel { flex: 1; padding: 15px; background: #dc3545; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; font-family: inherit;}
     </style>
 </head>
 <body>
 
     <header class="top-header">
         <h1 class="logo-text">งานดีขอนแก่น</h1>
-        <button id="btn-logout" class="btn-logout-icon">🚪 ออกจากระบบ</button>
+        <button id="btn-auth" class="btn-auth-icon">⏳ โหลด...</button>
     </header>
 
     <nav class="top-tabs">
-        <a href="services.html" class="tab-link active">🔍 ค้นหาบริการ</a>
-        <a href="map.html" class="tab-link">🗺️ แผนที่ช่าง</a>
-        <a href="my-bookings.html" class="tab-link">📅 คิวงานของฉัน</a>
+        <a href="services.html" class="tab-link active">🔍 บริการ</a>
+        <a href="map.html" class="tab-link">🗺️ แผนที่</a>
+        <a href="my-bookings.html" class="tab-link">📅 คิวงาน</a>
     </nav>
 
     <div class="content-container">
         <div class="search-section">
             <input type="text" id="searchInput" class="search-bar" placeholder="🔎 ค้นหางานบริการ...">
-            <div class="category-filters" id="categoryBox">
-                <button class="cat-btn active" data-cat="all">🌟 ทั้งหมด</button>
-                <button class="cat-btn" data-cat="cleaning">🧹 ทำความสะอาด</button>
-                <button class="cat-btn" data-cat="aircon">❄️ แอร์</button>
-                <button class="cat-btn" data-cat="gardening">🌿 ตัดหญ้า</button>
-                <button class="cat-btn" data-cat="plumbing">🚰 ประปา</button>
-                <button class="cat-btn" data-cat="electric">⚡ ไฟฟ้า</button>
-                <button class="cat-btn" data-cat="repair">🛠️ ซ่อมแซม</button>
-                <button class="cat-btn" data-cat="cooking">🍳 รับทำอาหาร</button>
-                <button class="cat-btn" data-cat="computer">💻 ซ่อมคอมฯ</button>
-                <button class="cat-btn" data-cat="mobile">📱 ซ่อมมือถือ</button>
-                <button class="cat-btn" data-cat="automotive">🚗 ซ่อมรถ</button>
-                <button class="cat-btn" data-cat="event">🎉 อีเวนท์</button>
-                <button class="cat-btn" data-cat="general">💼 รับจ้างทั่วไป</button>
-            </div>
+            <select id="categoryFilter" class="filter-select">
+                <option value="all">📁 หมวดหมู่ทั้งหมด</option>
+                <option value="cleaning">🧹 ทำความสะอาด</option>
+                <option value="aircon">❄️ แอร์</option>
+                <option value="gardening">🌿 ตัดหญ้า / จัดสวน</option>
+                <option value="plumbing">🚰 ประปา</option>
+                <option value="electric">⚡ ไฟฟ้า</option>
+                <option value="repair">🛠️ ซ่อมแซม</option>
+                <option value="cooking">🍳 รับทำอาหาร</option>
+                <option value="computer">💻 ซ่อมคอมพิวเตอร์</option>
+                <option value="mobile">📱 ซ่อมมือถือ</option>
+                <option value="automotive">🚗 ซ่อมรถยนต์</option>
+                <option value="event">🎉 งานอีเวนท์</option>
+                <option value="general">💼 รับจ้างทั่วไป</option>
+                <option value="other">✨ อื่นๆ</option>
+            </select>
         </div>
 
         <div class="distance-banner" id="distanceBanner">
@@ -101,7 +107,7 @@
         </div>
 
         <div class="service-grid" id="service-list">
-            <p style="text-align: center; width: 100%; font-size: 20px;">กำลังโหลดข้อมูล...</p>
+            <p style="text-align: center; width: 100%; font-size: 18px;">กำลังโหลดข้อมูลช่าง...</p>
         </div>
     </div>
 
@@ -109,15 +115,19 @@
         <div class="modal-content">
             <h3>📝 รายละเอียดการจ้างงาน</h3>
             <p style="font-size: 16px; color: var(--text-sub);">บริการ: <b id="modalServiceName" style="color: var(--text-main);"></b></p>
+            
             <label>📅 วัน/เวลา ให้ช่างเข้างาน:</label>
             <input type="datetime-local" id="modalTime">
+            
             <label>📞 เบอร์ติดต่อของคุณ:</label>
             <input type="text" id="modalPhone" placeholder="เบอร์โทรติดต่อผู้ให้บริการ...">
-            <label>📌 ปักหมุดหน้างาน:</label>
+            
+            <label>📌 ปักหมุดหน้างานของคุณ:</label>
             <button type="button" class="btn-gps" id="btn-get-location">🎯 ค้นหาตำแหน่งปัจจุบัน</button>
             <div id="modalMap"></div>
             <input type="hidden" id="modalLat">
             <input type="hidden" id="modalLng">
+            
             <div class="modal-actions">
                 <button class="btn-cancel" onclick="closeModal()">ยกเลิก</button>
                 <button class="btn-confirm" id="btn-confirm-booking">ยืนยันส่งใบงาน</button>
@@ -127,11 +137,10 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-        // 🌟 อิมพอร์ต signOut เข้ามาเพื่อทำปุ่มออกจากระบบ
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
         import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
-        // *** ใส่ Config โปรเจกต์ใหม่ของคุณ ***
+        // *** Config ชุดใหม่ (Jobs-fa654) เซิร์ฟเวอร์ไทย ***
         const firebaseConfig = {
             apiKey: "AIzaSyAKRjExcEtHwljxXu2Ytr9kV1lJ_JiuFhg",
             authDomain: "jobs-fa654.firebaseapp.com",
@@ -145,22 +154,32 @@
         const db = getFirestore(app);
 
         let currentUser = null;
-        onAuthStateChanged(auth, user => { currentUser = user; });
 
-        // 🚪 ฟังก์ชันปุ่มออกจากระบบที่มุมขวาบน
-        document.getElementById('btn-logout').addEventListener('click', () => {
-            if(confirm("ต้องการออกจากระบบใช่หรือไม่?")) {
-                signOut(auth).then(() => { window.location.href = "index.html"; });
+        // 🌟 ดักจับสถานะล็อกอิน เพื่อโชว์ปุ่มให้ถูกต้อง (รองรับ Guest)
+        onAuthStateChanged(auth, user => { 
+            currentUser = user; 
+            const authBtn = document.getElementById('btn-auth');
+            
+            if (user) {
+                authBtn.innerText = "🚪 ออกจากระบบ";
+                authBtn.style.color = "#dc3545"; // สีแดง
+                authBtn.onclick = () => {
+                    if(confirm("ต้องการออกจากระบบใช่หรือไม่?")) {
+                        signOut(auth).then(() => location.reload());
+                    }
+                };
+            } else {
+                authBtn.innerText = "👤 เข้าสู่ระบบ";
+                authBtn.style.color = "var(--primary)"; // สีน้ำเงิน
+                authBtn.onclick = () => location.href = "login.html"; // พาไปหน้า login แบบเบอร์โทร
             }
         });
 
-        let allServices = [];
-        let providersData = {};
-        let reviewsData = {};
-        let usersData = {};
+        let allServices = [], providersData = {}, reviewsData = {}, usersData = {};
         let userLocation = null; 
         let currentFilter = 'all';
 
+        // 🧮 ฟังก์ชันคำนวณระยะทาง
         function calcDistance(lat1, lon1, lat2, lon2) {
             if (!lat1 || !lon1 || !lat2 || !lon2) return null;
             const R = 6371; 
@@ -171,6 +190,7 @@
             return R * c;
         }
 
+        // 📡 ขอตำแหน่งปัจจุบันของลูกค้า
         document.getElementById('btn-enable-gps').addEventListener('click', () => {
             if (navigator.geolocation) {
                 document.getElementById('btn-enable-gps').innerText = "กำลังค้นหา...";
@@ -178,35 +198,38 @@
                     userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
                     document.getElementById('distanceBanner').style.display = 'none'; 
                     renderServices(); 
-                }, () => { alert("กรุณาอนุญาตให้เบราว์เซอร์เข้าถึงตำแหน่ง GPS"); });
+                }, () => { 
+                    alert("กรุณาอนุญาตให้เบราว์เซอร์เข้าถึงตำแหน่ง GPS"); 
+                    document.getElementById('btn-enable-gps').innerText = "🎯 คำนวณระยะทาง";
+                });
             }
         });
 
+        // 🔄 โหลดข้อมูลทั้งหมดจาก Firestore
         async function loadData() {
             try {
                 const provSnap = await getDocs(collection(db, "providers"));
-                provSnap.forEach(doc => { providersData[doc.id] = doc.data(); });
+                provSnap.forEach(doc => providersData[doc.id] = doc.data());
 
                 const usersSnap = await getDocs(collection(db, "users"));
-                usersSnap.forEach(doc => { usersData[doc.id] = doc.data(); });
+                usersSnap.forEach(doc => usersData[doc.id] = doc.data());
 
                 const revSnap = await getDocs(collection(db, "reviews"));
                 revSnap.forEach(doc => {
                     const data = doc.data();
-                    if (!reviewsData[data.service_id]) {
-                        reviewsData[data.service_id] = { totalRating: 0, count: 0 };
-                    }
+                    if (!reviewsData[data.service_id]) reviewsData[data.service_id] = { totalRating: 0, count: 0 };
                     reviewsData[data.service_id].totalRating += data.rating;
                     reviewsData[data.service_id].count += 1;
                 });
 
                 const srvSnap = await getDocs(collection(db, "services"));
-                srvSnap.forEach(doc => { allServices.push({ id: doc.id, ...doc.data() }); });
+                srvSnap.forEach(doc => allServices.push({ id: doc.id, ...doc.data() }));
                 
                 renderServices();
             } catch (e) { console.error("Error loading data:", e); }
         }
 
+        // 🎨 วาดการ์ดบริการ
         function renderServices() {
             const listDiv = document.getElementById('service-list');
             const keyword = document.getElementById('searchInput').value.toLowerCase();
@@ -222,7 +245,7 @@
                 count++;
 
                 const providerUser = usersData[srv.provider_uid];
-                const shopName = (providerUser && providerUser.name) ? providerUser.name : "ไม่ระบุชื่อผู้ให้บริการ";
+                const shopName = (providerUser && providerUser.name) ? providerUser.name : "ร้านค้าในระบบ";
 
                 let reviewHtml = "<span>⭐ ยังไม่มีรีวิว</span>";
                 if (reviewsData[srv.id]) {
@@ -246,8 +269,8 @@
                         ${imgHtml}
                         <div class="card-body">
                             <h3>${srv.name}</h3>
-                            <p style="color: var(--primary); font-weight: bold; font-size: 15px; margin: 0 0 10px 0;">🏪 ${shopName}</p>
-                            <p style="color: var(--text-sub); font-size: 15px;">${srv.description || ''}</p>
+                            <p style="color: var(--primary); font-weight: bold; font-size: 14px; margin: 0 0 8px 0;">🏪 ${shopName}</p>
+                            <p style="color: var(--text-sub); font-size: 14px;">${srv.description || ''}</p>
                             
                             <div class="meta-info">
                                 <div>${reviewHtml}</div>
@@ -264,36 +287,42 @@
             if(count === 0) listDiv.innerHTML = "<p style='grid-column: 1/-1; text-align: center;'>ไม่พบบริการที่ค้นหา</p>";
         }
 
-        document.getElementById('searchInput').addEventListener('input', renderServices);
-        document.querySelectorAll('.cat-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-                currentFilter = e.target.getAttribute('data-cat');
-                renderServices();
-            });
+        // Event Listener สำหรับระบบค้นหาและกรอง
+        document.getElementById('categoryFilter').addEventListener('change', (e) => {
+            currentFilter = e.target.value;
+            renderServices();
         });
+        document.getElementById('searchInput').addEventListener('input', renderServices);
 
         loadData();
 
-        // --- ระบบ Popup Modal ---
+        // --- ระบบ Popup Modal สำหรับจ้างงาน (มีแผนที่ย่อย) ---
         let currentServiceToBook = null;
         let map = null;
         let marker = null;
 
         window.openBookingModal = function(serviceStr) {
-            if (!currentUser) return alert("กรุณาล็อกอินก่อนจ้างงาน");
+            // 🌟 เช็คว่าล็อกอินหรือยัง ถ้ายังให้เด้งไปหน้า login.html ทันที
+            if (!currentUser) {
+                alert("กรุณาเข้าสู่ระบบก่อนทำการจ้างงานครับ");
+                window.location.href = "login.html";
+                return;
+            }
+
             currentServiceToBook = JSON.parse(decodeURIComponent(serviceStr));
             document.getElementById('modalServiceName').innerText = currentServiceToBook.name;
             
+            // ล้างค่าเก่า
             document.getElementById('modalTime').value = '';
             document.getElementById('modalPhone').value = '';
             document.getElementById('modalLat').value = '';
             document.getElementById('modalLng').value = '';
             if (marker) { map.removeLayer(marker); marker = null; }
 
+            // เปิด Modal
             document.getElementById('bookingModal').style.display = 'flex';
 
+            // โหลดแผนที่ Leaflet ด้านใน Modal
             if (!map) {
                 map = L.map('modalMap').setView([16.4322, 102.8236], 13);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
@@ -307,6 +336,7 @@
             currentServiceToBook = null;
         };
 
+        // ปุ่มค้นหาตำแหน่งปัจจุบันเพื่อปักหมุดใน Modal
         document.getElementById('btn-get-location').addEventListener('click', () => {
             const btn = document.getElementById('btn-get-location');
             btn.innerText = "กำลังค้นหา...";
@@ -332,6 +362,7 @@
             else marker = L.marker([lat, lng]).addTo(map);
         }
 
+        // ยืนยันส่งใบงาน
         document.getElementById('btn-confirm-booking').addEventListener('click', async () => {
             const phone = document.getElementById('modalPhone').value;
             const lat = parseFloat(document.getElementById('modalLat').value);
@@ -362,7 +393,7 @@
                     appointment_time: appointmentTime,
                     created_at: new Date()
                 });
-                alert(`✅ ส่งใบงานสำเร็จ! กรุณารอผู้ให้บริการยืนยัน`);
+                alert(`✅ ส่งใบงานสำเร็จ! สามารถตรวจสอบสถานะได้ที่เมนู "คิวงาน"`);
                 closeModal();
             } catch (e) { alert("ล้มเหลว: " + e.message); }
             finally { btn.disabled = false; btn.innerText = "ยืนยันส่งใบงาน"; }
